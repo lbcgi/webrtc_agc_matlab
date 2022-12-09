@@ -26,7 +26,7 @@ function  [y, stt, out] = WebRtcAgc_ProcessDigital(stt, in_near, num_bands, FS, 
 %     // Account for far end VAD
     if (stt.vadFarend.counter > 10) 
         tmp32 = 3 * logratio;
-        logratio = bitshift(tmp32 - stt.vadFarend.logRatio, 2);
+        logratio = floor(tmp32 - stt.vadFarend.logRatio/4);
     end
 
 %     // Determine decay factor depending on VAD
@@ -44,7 +44,7 @@ function  [y, stt, out] = WebRtcAgc_ProcessDigital(stt, in_near, num_bands, FS, 
 %         //       * (2^27/(DecayTime*(upper_thr-lower_thr)))) >> 10);
 %         // SUBSTITUTED: 2^27/(DecayTime*(upper_thr-lower_thr))  ->  65
         tmp32 = (lower_thr - logratio) * 65;
-        decay = fix(tmp32/2^10);
+        decay = floor(tmp32/1024);
     end
 
 %     // adjust decay factor for long silence (detected as low standard deviation)
@@ -56,7 +56,7 @@ function  [y, stt, out] = WebRtcAgc_ProcessDigital(stt, in_near, num_bands, FS, 
 %             // decay = (int16_t)(((stt->vadNearend.stdLongTerm - 4000) * decay) >>
 %             // 12);
             tmp32 = (stt.vadNearend.stdLongTerm - 4000) * decay;
-            decay = bitshift(tmp32 , -12);
+            decay = floor(tmp32 / 4096);
         end
 
         if (lowlevelSignal ~= 0) 
@@ -115,10 +115,10 @@ function  [y, stt, out] = WebRtcAgc_ProcessDigital(stt, in_near, num_bands, FS, 
         if (mzeros == 0) 
             mzeros = 31;
         end
-        tmp32 = bitand(bitshift(cur_level , mzeros) , hex2dec('7FFFFFFF'));
-        frac = sign(tmp32)*bitshift(abs(tmp32) , -19); % // Q12.//notice
+        tmp32 = bitand(cur_level * 2^mzeros , hex2dec('7FFFFFFF'),'uint32');
+        frac = floor(tmp32 / 524288); % // Q12.//notice
         tmp32 = (stt.gainTable(mzeros) - stt.gainTable(mzeros + 1)) * frac;
-        gains(k + 2) = stt.gainTable(mzeros + 1) + tmp32/2^12;
+        gains(k + 2) = stt.gainTable(mzeros + 1) + floor(tmp32/2^12);
 % #ifdef WEBRTC_AGC_DEBUG_DUMP
 %         if (k == 0) {
 %           fprintf(stt->logFile, "%d\t%d\t%d\t%d\t%d\n", env[0], cur_level,
@@ -128,15 +128,15 @@ function  [y, stt, out] = WebRtcAgc_ProcessDigital(stt, in_near, num_bands, FS, 
     end
 
 %     // Gate processing (lower gain during absence of speech)
-    mzeros = bitshift(mzeros , 9) - bitshift(frac , -3);
+    mzeros = mzeros*512 - floor(frac/8);
 %     // find number of leading zeros
-    zeros_fast = stt.capacitorFast;
+    zeros_fast = NormU32(stt.capacitorFast);
     if (stt.capacitorFast == 0) 
         zeros_fast = 31;
     end
     tmp32 = bitand(bitshift(round(stt.capacitorFast) , round(zeros_fast)) , hex2dec('7FFFFFFF'));
-    zeros_fast = bitshift(round(zeros_fast),9);
-    zeros_fast = zeros_fast - bitshift(tmp32 , -22);
+    zeros_fast = zeros_fast*512;
+    zeros_fast = zeros_fast - floor(tmp32 / 4194304);
 
     gate = 1000 + zeros_fast - mzeros - stt.vadNearend.stdShortTerm;
 
@@ -144,25 +144,25 @@ function  [y, stt, out] = WebRtcAgc_ProcessDigital(stt, in_near, num_bands, FS, 
         stt.gatePrevious = 0;
     else 
         tmp32 = stt.gatePrevious * 7;
-        gate =  (gate + tmp32)/ 2^3;
+        gate =  floor((gate + tmp32)/ 8);
         stt.gatePrevious = gate;
     end
 %     // gate < 0     -> no gate
 %     // gate > 2500  -> max gate
     if (gate > 0) 
         if (gate < 2500) 
-            gain_adj = bitshift((2500 - gate) , 5);
+            gain_adj = floor((2500 - gate) / 2^5);
         else 
             gain_adj = 0;
         end
         for k = 0:1:9 
             if ((gains(k + 2) - stt.gainTable(1)) > 8388608) 
 %                 // To prevent wraparound
-                tmp32 = bitshift(gains(k + 2) - stt.gainTable(1) , -8);
-                tmp32 = tmp32(178 + gain_adj);
+                tmp32 = floor((gains(k + 2) - stt.gainTable(1)) / 256);
+                tmp32 = tmp32*(178 + gain_adj);
             else 
                 tmp32 = (gains(k + 1) - stt.gainTable(1)) * (178 + gain_adj);
-                tmp32 = bitshift(tmp32 , -8);
+                tmp32 = floor(tmp32 / 256);
             end
             gains(k + 2) = stt.gainTable(1) + tmp32;
         end
@@ -175,7 +175,7 @@ function  [y, stt, out] = WebRtcAgc_ProcessDigital(stt, in_near, num_bands, FS, 
         if (gains(k + 2) > 47453132) 
             mzeros = 16 - gains(k + 2);
         end
-        gain32 = bitshift(gains(k + 2) , -mzeros) + 1;
+        gain32 = floor(gains(k + 2) / 2^mzeros) + 1;
         gain32 = gain32*gain32;
 %         // check for overflow
         while (AGC_MUL32(bitshift(round(env(k+1)) , -12) + 1, gain32) >...
@@ -187,7 +187,7 @@ function  [y, stt, out] = WebRtcAgc_ProcessDigital(stt, in_near, num_bands, FS, 
             else 
                 gains(k + 2) = (gains(k + 2) * 253) / 256;
             end
-            gain32 = bitshift(gains(k + 2) , -mzeros) + 1;
+            gain32 = floor(gains(k + 2) / 2^mzeros) + 1;
             gain32 = gain32*gain32;
         end
     end
@@ -207,15 +207,15 @@ function  [y, stt, out] = WebRtcAgc_ProcessDigital(stt, in_near, num_bands, FS, 
 %     // iterate over samples
     for n = 0:1:L-1 
         for i = 0:num_bands-1 
-            tmp32 = out(i + 1,n + 1) * bitshift((gain32 + 127) , -7);
-            out_tmp = sign(tmp32)*bitshift(abs(round(tmp32)) , -16);
+            tmp32 = out(i + 1,n + 1) * floor((gain32 + 127)/128);
+            out_tmp = floor(tmp32 /2^16);
             if (out_tmp > 4095) 
                 out(i + 1,n + 1) =  32767;
             elseif (out_tmp < -4096) 
                 out(i + 1,n + 1) =  -32768;
             else 
-                tmp32 = out(i + 1,n + 1) * bitshift(gain32 , -4);
-                out(i + 1,n + 1) = sign(tmp32)*bitshift(abs(round(tmp32)) , -16);
+                tmp32 = out(i + 1,n + 1) * floor(gain32/16);
+                out(i + 1,n + 1) = floor(tmp32 /65536);
             end
         end
     
@@ -228,8 +228,8 @@ function  [y, stt, out] = WebRtcAgc_ProcessDigital(stt, in_near, num_bands, FS, 
 %         // iterate over samples
         for n3 = 0:L - 1 
             for i3 = 0:num_bands - 1 
-                tmp64 = out(i3 + 1,k * L + n3 + 1) * bitshift(gain32 , -4);
-                tmp64 = sign(tmp64)*bitshift(round(abs(tmp64)) , -16);
+                tmp64 = out(i3 + 1,k * L + n3 + 1) * floor(gain32/16);
+                tmp64 = floor(tmp64/65536);
                 if (tmp64 > 32767) 
                     out(i3 + 1,k * L + n3 + 1) = 32767;
                 elseif (tmp64 < -32768) 

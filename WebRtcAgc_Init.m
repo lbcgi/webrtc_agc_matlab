@@ -1,11 +1,5 @@
 function [y, stt] = WebRtcAgc_Init(agcInst, minLevel, maxLevel, agcMode, fs, param)
    
-    global AGC_UNINITIALIZED_ERROR
-    global kAgcModeUnchanged
-    global kAgcModeFixedDigital
-    global kAgcModeAdaptiveDigital
-    global kAgcTrue
-    global AGC_UNSPECIFIED_ERROR
     
     kMsecSpeechInner = 520;
     kMsecSpeechOuter = 340;

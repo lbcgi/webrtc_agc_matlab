@@ -1,7 +1,8 @@
 function y = SHIFT_W32(x, c)
+
         if( c >=0 )
-            y = x*bitshift(1, c);
+            y = x*2^c;
         else
-            bitshift(x, -c);
+            y = floor(x/2^(-c));
         end
 end

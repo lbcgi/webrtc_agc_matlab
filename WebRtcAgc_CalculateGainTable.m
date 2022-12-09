@@ -17,7 +17,7 @@ function  [y, gainTable]= WebRtcAgc_CalculateGainTable(digCompGaindB, targetLeve
 %     // Calculate maximum digital gain and zero gain level
     tmp32no1 = (digCompGaindB - analogTarget)*(kCompRatio - 1);
     tmp16no1 = analogTarget - targetLevelDbfs;
-    tmp16no1 = tmp16no1 + DivW32W16ResW16(tmp32no1 + (kCompRatio /2), kCompRatio);
+    tmp16no1 = tmp16no1 + DivW32W16ResW16(tmp32no1 + floor(kCompRatio /2), kCompRatio);
     maxGain = max(tmp16no1, (analogTarget - targetLevelDbfs));
 %     tmp32no1 = WEBRTC_SPL_MUL_16_16(maxGain, kCompRatio);
 %     zeroGainLvl = digCompGaindB;
@@ -122,17 +122,17 @@ function  [y, gainTable]= WebRtcAgc_CalculateGainTable(digCompGaindB, targetLeve
         
             mzeros = NormW32(den) + 8;
         end
-         numFIX = WEBRTC_SPL_LSHIFT_W32(numFIX, mzeros); %// Q(14+zeros)
+         numFIX = numFIX*2^mzeros; %// Q(14+zeros)
 
 %         // Shift den so we end up in Qy1
         tmp32no1 = WEBRTC_SPL_SHIFT_W32(den, mzeros - 9); %// Q(zeros)
-        if (numFIX < 0)
-        
-            numFIX = numFIX - WEBRTC_SPL_RSHIFT_W32(tmp32no1, 1);
-        else
-        
-            numFIX = numFIX + WEBRTC_SPL_RSHIFT_W32(tmp32no1, 1);
-        end
+%         if (numFIX < 0)
+%         
+%             numFIX = numFIX - WEBRTC_SPL_RSHIFT_W32(tmp32no1, 1);
+%         else
+%         
+%             numFIX = numFIX + WEBRTC_SPL_RSHIFT_W32(tmp32no1, 1);
+%         end
         y32 = floor(floor(numFIX)/(floor(tmp32no1) + 0.0001)); %// in Q15
         if(y32>0)
             y32 = floor((y32 + 1)/2);

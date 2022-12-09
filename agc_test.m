@@ -1,4 +1,5 @@
 % agc test
+format long 
 
 agcConfig.compressionGaindB = 20;
 agcConfig.limiterEnable     = 1;
@@ -68,10 +69,14 @@ if(status == -1)
     disp('error1');
 end
 
-[status, agcInst] = WebRtcAgc_set_config(agcInst, agcConfig, param);
-if(status == -1)
-    disp('error2');
-end
+% [status, agcInst] = WebRtcAgc_set_config(agcInst, agcConfig, param);
+% if(status == -1)
+%     disp('error2');
+% end
+
+agcInst.usedConfig.compressionGaindB = agcConfig.compressionGaindB;
+agcInst.usedConfig.limiterEnable = agcConfig.limiterEnable;
+agcInst.usedConfig.targetLevelDbfs = agcConfig.targetLevelDbfs;
 
 num_bands = 1;
 samples = 80;
@@ -80,10 +85,14 @@ out = NaN(size(input));
 
 frms = round(size(input,2)/samples);
 st = 0;
+stt = agcInst;
 for cnt = 1:frms
-    [nAgcRet, stt, out(st + 1:st + samples), outMicLevel, saturationWarning] = WebRtcAgc_Process(agcInst, input(st + 1:st + samples), num_bands, samples,...
+    [nAgcRet, stt, out(st + 1:st + samples), outMicLevel, saturationWarning] = WebRtcAgc_Process(stt, input(st + 1:st + samples), num_bands, samples,...
                                         inMicLevel, param);
     st = st + samples;
 end
-
-soundsc(out,fs)
+% audiowrite('byby_8K_1C_16bit.agc.mb.wav', out/max(out), fs);
+% soundsc(out,fs)
+% audiowrite('byby_8K_1C_16bit.agc.mb.wav', out/max(out), fs);
+fd = fopen('byby_8K_1C_16bit.agc.mb.pcm', 'w');
+fwrite(fd, out/max(out));

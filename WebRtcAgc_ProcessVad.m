@@ -27,13 +27,14 @@ function [logRatio, state] = WebRtcAgc_ProcessVad(state, in, nrSamples, param)
         for k = 0:3
             out = buf2(k + 1) + HPstate;
             tmp32 = 600 * out;
-            HPstate = sign(tmp32)*bitshift(abs(round(tmp32)) , -10) - buf2(k+1);
+            HPstate = fix(tmp32/2^10) - buf2(k+1);
 
 %             // Add 'out * out / 2**6' to 'nrg' in a non-overflowing
 %             // way. Guaranteed to work as long as 'out * out / 2**6' fits in
 %             // an int32_t.
-            nrg = nrg + out * floor((out / bitshift(1 , 6)));
-            nrg = nrg + out * floor(mod(out , bitshift(1 ,6)) / bitshift(1 , 6));
+            vl_2exp6 = 2^6;
+            nrg = nrg + out * fix((out / vl_2exp6));
+            nrg = nrg + out * fix(mod(out , vl_2exp6) / vl_2exp6);
         end
     end
     state.HPstate = HPstate;
@@ -73,14 +74,14 @@ function [logRatio, state] = WebRtcAgc_ProcessVad(state, in, nrSamples, param)
     state.meanShortTerm =  floor(tmp32 / 2^4);
 
 %     // update short-term estimate of variance in energy level (Q8)
-    tmp32 = (dB * dB) /2^12;
+    tmp32 = floor((dB * dB) /2^12);
     tmp32 = tmp32 + state.varianceShortTerm * 15;
-    state.varianceShortTerm = tmp32 / 16;
+    state.varianceShortTerm = floor(tmp32 / 16);
 
 %     // update short-term estimate of standard deviation in energy level (Q10)
     tmp32 = state.meanShortTerm * state.meanShortTerm;
-    tmp32 = (state.varianceShortTerm *2^12) - tmp32;
-    state.stdShortTerm = sqrt(tmp32);
+    tmp32 = state.varianceShortTerm *2^12 - tmp32;
+    state.stdShortTerm = fix(sqrt(tmp32));
 
 %     // update long-term estimate of mean energy level (Q10)
     tmp32 = state.meanLongTerm * state.counter + dB;
@@ -96,7 +97,7 @@ function [logRatio, state] = WebRtcAgc_ProcessVad(state, in, nrSamples, param)
 %     // update long-term estimate of standard deviation in energy level (Q10)
     tmp32 = state.meanLongTerm * state.meanLongTerm;
     tmp32 = (state.varianceLongTerm *2^12) - tmp32;
-    state.stdLongTerm = sqrt(tmp32);
+    state.stdLongTerm = fix(sqrt(tmp32));
 
 %     // update voice activity measure (Q10)
     tmp16 = 3 * 2^12;
@@ -110,7 +111,7 @@ function [logRatio, state] = WebRtcAgc_ProcessVad(state, in, nrSamples, param)
     tmp32b = state.logRatio * 13*2^12;
     tmp32b = floor(tmp32b /2^10);
     tmp32 = tmp32 + tmp32b;
-    state.logRatio = (tmp32 / 2^6);
+    state.logRatio = floor(tmp32 / 2^6);
 
 %     // limit
     if (state.logRatio > 2048) 

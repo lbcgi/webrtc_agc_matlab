@@ -28,7 +28,7 @@ function [y, stt] = WebRtcAgc_set_config(agcInst, agcConfig, param)
    end
    
     stt = WebRtcAgc_UpdateAgcThresholds(stt, param);
-    [y, stt.digitalAgc.gainTable] = WebRtcAgc_CalculateGainTable(stt.compressionGaindB,stt.targetLevelDbfs, stt.limiterEnable, stt.analogTarget, param);
+    [~, stt.digitalAgc.gainTable] = WebRtcAgc_CalculateGainTable(stt.compressionGaindB,stt.targetLevelDbfs, stt.limiterEnable, stt.analogTarget, param);
 % #ifdef AGC_DEBUG//test log
 %         fprintf(stt->fpt, "AGC->set_config, frame %d: Error from calcGainTable\n\n", stt->fcount);
 % #endif
