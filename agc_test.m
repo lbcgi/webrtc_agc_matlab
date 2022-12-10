@@ -1,6 +1,12 @@
 % agc test
 format long 
 
+% clear;
+% global ii
+% ii = 0;
+% global decay3_mb
+
+
 agcConfig.compressionGaindB = 20;
 agcConfig.limiterEnable     = 1;
 agcConfig.targetLevelDbfs   = 3;
@@ -54,6 +60,7 @@ param.kTargetLevelTable = [
         1690, 1342, 1066, 847, 673, 534, 424,...
         337, 268, 213, 169, 134, 107, 85,...
         67];
+    
 param.kAvgDecayTime = 250;
 param.OFFSET_ENV_TO_RMS = 9;
 
@@ -92,7 +99,7 @@ for cnt = 1:frms
     st = st + samples;
 end
 % audiowrite('byby_8K_1C_16bit.agc.mb.wav', out/max(out), fs);
-% soundsc(out,fs)
+soundsc(out,fs)
 % audiowrite('byby_8K_1C_16bit.agc.mb.wav', out/max(out), fs);
 fd = fopen('byby_8K_1C_16bit.agc.mb.pcm', 'w');
-fwrite(fd, out/max(out));
+fwrite(fd, out, 'int16');

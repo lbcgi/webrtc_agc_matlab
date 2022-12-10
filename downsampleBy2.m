@@ -1,4 +1,6 @@
 function [out, filtState] = downsampleBy2(in, len, filtState) 
+     global ii
+     global nrgh
 
      state0 = filtState(1);
      state1 = filtState(2);
@@ -19,6 +21,7 @@ function [out, filtState] = downsampleBy2(in, len, filtState)
         diff = in32 - state1;
         diff = round(diff);
         tmp1 =  state0 + floor(diff/2^16) * (kResampleAllpass2(1)) + floor(bitand(diff,num_h2d,'int32')*kResampleAllpass2(1)/2^16);
+       
         state0 = in32;
         diff = tmp1 - state2;
         diff = round(diff);
@@ -51,7 +54,7 @@ function [out, filtState] = downsampleBy2(in, len, filtState)
 
 %         // add two allpass outputs, divide by two and round
         out32 = floor((state3 + state7 + 1024)/2^11);
-
+        
 %         // limit amplitude to prevent wrap-around, and write to output array
 %         out(pos_out + 1) = SatW32ToW16(out32);
         out(pos_out + 1) = out32;

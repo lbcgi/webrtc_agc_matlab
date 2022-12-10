@@ -40,14 +40,14 @@ function  [y, stt, out] = WebRtcAgc_ProcessDigital(stt, in_near, num_bands, FS, 
     logratio = int16(logratio);
     if (logratio > upper_thr) 
 %         // decay = -2^17 / DecayTime;  ->  -65
-        decay = -65;
+        decay = -int16(65;
     elseif (logratio < lower_thr)
         decay = 0;
     else
 %         // decay = (int16_t)(((lower_thr - logratio)
 %         //       * (2^27/(DecayTime*(upper_thr-lower_thr)))) >> 10);
 %         // SUBSTITUTED: 2^27/(DecayTime*(upper_thr-lower_thr))  ->  65
-        tmp32 = int32((lower_thr - logratio) * 65);
+        tmp32 = (lower_thr - logratio) * 65;
         decay = double(int16(tmp32/1024));
     end
 %     ii = ii + 1;
@@ -85,7 +85,7 @@ function  [y, stt, out] = WebRtcAgc_ProcessDigital(stt, in_near, num_bands, FS, 
                 max_nrg = nrg;
             end
         end
-        env(k + 1) = int32(max_nrg);
+        env(k + 1) = max_nrg;
     end
 
 %     // Calculate gain per sub frame
@@ -94,14 +94,14 @@ function  [y, stt, out] = WebRtcAgc_ProcessDigital(stt, in_near, num_bands, FS, 
 %         // Fast envelope follower
 %         //  decay time = -131000 / -1000 = 131 (ms)
         stt.capacitorFast =...
-                AGC_SCALEDIFF32(int32(-1000), stt.capacitorFast, stt.capacitorFast);
+                AGC_SCALEDIFF32(-1000, stt.capacitorFast, stt.capacitorFast);
         if (env(k + 1) > stt.capacitorFast) 
             stt.capacitorFast = env(k + 1);
         end
 %         // Slow envelope follower
         if (env(k + 1) > stt.capacitorSlow) 
 %             // increase capacitorSlow
-            stt.capacitorSlow = AGC_SCALEDIFF32(int32(500), (env(k + 1) - stt.capacitorSlow),...
+            stt.capacitorSlow = AGC_SCALEDIFF32(500, (env(k + 1) - stt.capacitorSlow),...
                                                  stt.capacitorSlow);
         else 
 %             // decrease capacitorSlow

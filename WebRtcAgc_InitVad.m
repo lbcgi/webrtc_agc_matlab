@@ -1,5 +1,5 @@
 function state = WebRtcAgc_InitVad
-       
+  
    state.HPstate = 0;   %// state of high pass filter
     state.logRatio = 0;  %// log( P(active) / P(inactive) )
 %     // average input level (Q10)

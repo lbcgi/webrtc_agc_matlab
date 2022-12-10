@@ -7,4 +7,4 @@ if(a<0)
     a = 1 - a;
 end
 %     // returns the number of leading zero bits in the argument.
-   y = NormU32(floor(a)) - 1;
+   y = NormU32(int32(a)) - 1;
